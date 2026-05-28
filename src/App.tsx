@@ -12,8 +12,8 @@ import { CITIES } from "./lib/cities";
 import LoginPage from "./login/LoginPage";
 
 const TABS: { id: Circle; label: string }[] = [
-  { id: "work", label: "Work" },
   { id: "personal", label: "Personal" },
+  { id: "work", label: "Work" },
 ];
 
 function getSelfCity() {
@@ -25,7 +25,7 @@ export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [guestMode, setGuestMode] = useState(false);
-  const [tab, setTab] = useState<Circle>("work");
+  const [tab, setTab] = useState<Circle>("personal");
   const [now, setNow] = useState(() => new Date());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number; lng: number } | null>(null);

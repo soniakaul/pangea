@@ -410,7 +410,9 @@ export default function Globe({
 }: Props) {
   const [webglAvailable] = useState(() => hasWebGL());
   const [focused, setFocused] = useState<{ lat: number; lng: number } | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<"settings" | "help" | null>(null);
+  const settingsOpen = activePanel === "settings";
+  const helpOpen = activePanel === "help";
   const activeColor =
     PIN_COLORS.find((c) => c.id === pinColorId)?.value ?? PIN_COLORS[0].value;
   const bodyPalette =
@@ -522,7 +524,7 @@ export default function Globe({
       <Clock />
 
       <button
-        onClick={() => setSettingsOpen((o) => !o)}
+        onClick={() => setActivePanel(settingsOpen ? null : "settings")}
         title="Settings"
         aria-label="Settings"
         style={{
@@ -547,6 +549,38 @@ export default function Globe({
         }}
       >
         <GearIcon />
+      </button>
+
+      <button
+        onClick={() => setActivePanel(helpOpen ? null : "help")}
+        title="Help"
+        aria-label="Help"
+        style={{
+          position: "absolute",
+          bottom: 16,
+          right: 16,
+          width: 36,
+          height: 36,
+          borderRadius: "50%",
+          background: helpOpen
+            ? "rgba(61, 36, 16, 0.9)"
+            : "rgba(245, 235, 215, 0.78)",
+          border: "1px solid rgba(61, 36, 16, 0.25)",
+          color: helpOpen ? "#faf3e0" : "#3d2410",
+          cursor: "pointer",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 0,
+          fontFamily: "Georgia, ui-serif, serif",
+          fontSize: 18,
+          fontWeight: 500,
+          lineHeight: 1,
+          transition: "background 160ms, color 160ms",
+        }}
+      >
+        ?
       </button>
 
       {settingsOpen && (
@@ -619,6 +653,88 @@ export default function Globe({
           </SettingsSection>
         </div>
       )}
+
+      {helpOpen && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 56,
+            right: 16,
+            width: 340,
+            maxHeight: "calc(100vh - 120px)",
+            overflowY: "auto",
+            padding: 18,
+            background: "rgba(245, 235, 215, 0.94)",
+            border: "1px solid rgba(61, 36, 16, 0.25)",
+            borderRadius: 2,
+            backdropFilter: "blur(8px)",
+            boxShadow: "0 12px 32px -10px rgba(61, 36, 16, 0.3)",
+            color: "#1c1410",
+            fontFamily: "ui-serif, Georgia, serif",
+            fontSize: 13,
+            lineHeight: 1.55,
+          }}
+        >
+          <HelpSection title="How it works">
+            Pangea shows the people who matter, in real time, around the world.
+            Add anyone in the side rail — friends in Personal, teammates in Work.
+            Each person becomes a pin on the globe that lights up while they're
+            awake (Personal) or working (Work).
+          </HelpSection>
+
+          <HelpSection title="Interactions">
+            <ul style={{ margin: 0, paddingLeft: 16 }}>
+              <li>Click a pin or row → camera flies to that person</li>
+              <li>Hover anything → matching row + pin highlight together</li>
+              <li>Reset view → camera returns to face your location</li>
+              <li>Gear icon → globe color + active pin color</li>
+            </ul>
+          </HelpSection>
+
+          <HelpSection title="Install as a Mac app">
+            Pangea works best as a standalone window in your Dock — no tabs, no
+            URL bar.
+            <ul style={{ margin: "8px 0 0", paddingLeft: 16 }}>
+              <li>Safari: <em>File → Add to Dock</em></li>
+              <li>Chrome: ⋮ menu → <em>Install Pangea</em></li>
+            </ul>
+          </HelpSection>
+
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: "1px solid rgba(184, 134, 42, 0.4)",
+              fontSize: 11,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: "#a98448",
+            }}
+          >
+            sign in to sync across devices
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HelpSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: 2.5,
+          textTransform: "uppercase",
+          color: "#7a5a30",
+          marginBottom: 6,
+          fontFamily: "ui-serif, Georgia, serif",
+        }}
+      >
+        {title}
+      </div>
+      <div>{children}</div>
     </div>
   );
 }
