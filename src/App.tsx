@@ -30,15 +30,22 @@ export default function App() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number; lng: number } | null>(null);
   const { store, addPerson, updatePerson, removePerson, toggleFavorite } = useStore(user);
-  const { pinColor, bodyPalette, setPinColor, setBodyPalette } = usePreferences(user);
+  const { pinColor, bodyPalette, selfAvailability, setPinColor, setBodyPalette, setSelfAvailability } =
+    usePreferences(user);
+
+  const selfCity = useMemo(getSelfCity, []);
 
   const handleSelectPerson = useCallback(
     (id: string) => {
+      if (id === "__self__") {
+        setFlyTo({ lat: selfCity.lat, lng: selfCity.lng });
+        return;
+      }
       const tabPeople = store[tab];
       const found = tabPeople.find((p) => p.id === id);
       if (found) setFlyTo({ lat: found.lat, lng: found.lng });
     },
-    [store, tab],
+    [store, tab, selfCity],
   );
 
   const handleClickPin = useCallback(
@@ -55,36 +62,47 @@ export default function App() {
 
   const handleSplashDone = useCallback(() => setLoading(false), []);
 
-  const selfCity = useMemo(getSelfCity, []);
   const selfPerson: Person = useMemo(
     () => ({
       id: "__self__",
-      name: "You",
+      name: "Me",
       cityName: selfCity.name,
       countryCode: selfCity.countryCode,
       timezone: selfCity.timezone,
       lat: selfCity.lat,
       lng: selfCity.lng,
-      workStart: 9,
-      workEnd: 17,
-      workDays: [1, 2, 3, 4, 5],
+      workStart: selfAvailability.workStart,
+      workEnd: selfAvailability.workEnd,
+      workDays: selfAvailability.workDays,
     }),
-    [selfCity],
+    [selfCity, selfAvailability],
   );
 
   const people = store[tab];
 
   const pins: PinDatum[] = useMemo(() => {
-    return people.map((p) => ({
-      id: p.id,
-      name: p.name,
-      lat: p.lat,
-      lng: p.lng,
-      timezone: p.timezone,
-      active: tab === "work" ? isPersonWorking(p, now) : isPersonAwake(p, now),
-      favorite: tab === "personal" ? !!p.favorite : false,
-    }));
-  }, [people, now, tab]);
+    const selfPin: PinDatum = {
+      id: "__self__",
+      name: "Me",
+      lat: selfPerson.lat,
+      lng: selfPerson.lng,
+      timezone: selfPerson.timezone,
+      active: tab === "work" ? isPersonWorking(selfPerson, now) : isPersonAwake(selfPerson, now),
+      isSelf: true,
+    };
+    return [
+      selfPin,
+      ...people.map((p) => ({
+        id: p.id,
+        name: p.name,
+        lat: p.lat,
+        lng: p.lng,
+        timezone: p.timezone,
+        active: tab === "work" ? isPersonWorking(p, now) : isPersonAwake(p, now),
+        favorite: tab === "personal" ? !!p.favorite : false,
+      })),
+    ];
+  }, [people, now, tab, selfPerson]);
 
   const workPeopleWithSelf = useMemo(
     () => [selfPerson, ...store.work],
@@ -236,6 +254,9 @@ export default function App() {
               peopleForBestMeeting={workPeopleWithSelf}
               now={now}
               hoveredId={hoveredId}
+              selfCityName={selfCity.name}
+              selfAvailability={selfAvailability}
+              onSelfAvailabilityChange={setSelfAvailability}
               onHover={setHoveredId}
               onSelect={handleSelectPerson}
               onAdd={(p) => addPerson("work", p)}

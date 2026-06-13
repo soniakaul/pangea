@@ -98,14 +98,30 @@ export default function PersonRow({
             gap: 8,
             alignItems: "center",
             marginTop: 2,
+            flexWrap: "nowrap",
           }}
         >
-          <span>{person.cityName}</span>
-          <span style={{ fontFamily: "ui-monospace, monospace" }}>
+          {/* City is the only flexible element — it truncates so the time + zone
+              never wrap or compress (e.g. GMT+5:30 is wider than GMT+8). */}
+          <span
+            style={{
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {person.cityName}
+          </span>
+          <span
+            style={{ fontFamily: "ui-monospace, monospace", whiteSpace: "nowrap", flexShrink: 0 }}
+          >
             {formatLocalTime(person.timezone, now)}
           </span>
-          {tz && <span style={{ fontSize: 10 }}>{tz}</span>}
-          <span style={{ display: "inline-flex", alignItems: "center" }}>
+          {tz && (
+            <span style={{ fontSize: 10, whiteSpace: "nowrap", flexShrink: 0 }}>{tz}</span>
+          )}
+          <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
             <PhaseIcon phase={phase} size={12} color={RAIL_MUTED} />
           </span>
         </div>
@@ -117,7 +133,7 @@ export default function PersonRow({
               e.stopPropagation();
               onToggleFavorite(person.id);
             }}
-            title={person.favorite ? "Unfavorite" : "Favorite"}
+            title={person.favorite ? "Unpin" : "Pin"}
             style={{
               border: "none",
               background: "transparent",

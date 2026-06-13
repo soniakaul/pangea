@@ -67,25 +67,32 @@ export type BestSlot = {
   attendees: string[];
 };
 
-export function findBestMeeting(slots: Slot[], people: Person[]): BestSlot | null {
+export function findBestMeeting(
+  slots: Slot[],
+  people: Person[],
+  durationMin = SLOT_MIN,
+): BestSlot | null {
   if (people.length === 0) return null;
+  // A meeting of durationMin needs that many consecutive base slots, with each
+  // attendee free across the whole window.
+  const need = Math.max(1, Math.round(durationMin / SLOT_MIN));
   let best: BestSlot | null = null;
-  const future = slots.filter((s) => s.start.getTime() > Date.now());
-  for (const slot of future) {
-    if (slot.availableIds.length === people.length) {
-      return {
-        start: slot.start,
-        end: new Date(slot.start.getTime() + SLOT_MIN * 60 * 1000),
-        attendees: slot.availableIds,
-      };
+  const nowMs = Date.now();
+  for (let i = 0; i + need <= slots.length; i++) {
+    if (slots[i].start.getTime() <= nowMs) continue;
+    // Intersect availability across the consecutive slots in the window.
+    let attendees = slots[i].availableIds;
+    for (let j = 1; j < need && attendees.length > 0; j++) {
+      const next = new Set(slots[i + j].availableIds);
+      attendees = attendees.filter((id) => next.has(id));
     }
-    if (!best || slot.availableIds.length > best.attendees.length) {
-      best = {
-        start: slot.start,
-        end: new Date(slot.start.getTime() + SLOT_MIN * 60 * 1000),
-        attendees: slot.availableIds,
-      };
-    }
+    const candidate: BestSlot = {
+      start: slots[i].start,
+      end: new Date(slots[i].start.getTime() + durationMin * 60 * 1000),
+      attendees,
+    };
+    if (attendees.length === people.length) return candidate;
+    if (!best || attendees.length > best.attendees.length) best = candidate;
   }
   return best;
 }

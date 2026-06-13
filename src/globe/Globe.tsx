@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { Html, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { latLngToVec3, sunDirection } from "./utils";
 import { hasWebGL } from "./webgl";
 import { buildLandGeometry } from "./land";
+import { formatLocalTime } from "../lib/time";
 
 export type PinDatum = {
   id: string;
@@ -14,6 +15,7 @@ export type PinDatum = {
   timezone: string;
   active: boolean;
   favorite?: boolean;
+  isSelf?: boolean;
 };
 
 const PIN_COLORS = [
@@ -126,6 +128,7 @@ function Continents() {
 function Pin({
   pin,
   hovered,
+  now,
   activeColor,
   onHover,
   onUnhover,
@@ -133,6 +136,7 @@ function Pin({
 }: {
   pin: PinDatum;
   hovered: boolean;
+  now: Date;
   activeColor: string;
   onHover: (id: string) => void;
   onUnhover: (id: string) => void;
@@ -202,6 +206,31 @@ function Pin({
           <ringGeometry args={[baseRadius * 1.6, baseRadius * 2.0, 32]} />
           <meshBasicMaterial color={outerColor} transparent opacity={0.7} side={THREE.DoubleSide} />
         </mesh>
+      )}
+
+      {hovered && (
+        <Html center position={[0, baseRadius * 3.2, 0]} style={{ pointerEvents: "none" }}>
+          <div
+            style={{
+              whiteSpace: "nowrap",
+              padding: "3px 9px",
+              background: "rgba(245, 235, 215, 0.94)",
+              border: "1px solid rgba(61, 36, 16, 0.3)",
+              borderRadius: 2,
+              color: "#3d2410",
+              fontFamily: "ui-serif, Georgia, serif",
+              fontSize: 12,
+              letterSpacing: 0.3,
+              boxShadow: "0 4px 14px -6px rgba(61, 36, 16, 0.45)",
+              backdropFilter: "blur(3px)",
+            }}
+          >
+            <span style={{ fontWeight: 500 }}>{pin.name}</span>
+            <span style={{ color: "#a07434", marginLeft: 8 }}>
+              {formatLocalTime(pin.timezone, now)}
+            </span>
+          </div>
+        </Html>
       )}
     </group>
   );
@@ -466,6 +495,7 @@ export default function Globe({
             key={p.id}
             pin={p}
             hovered={hoveredId === p.id}
+            now={now}
             activeColor={activeColor}
             onHover={onHoverPin}
             onUnhover={(id) => {

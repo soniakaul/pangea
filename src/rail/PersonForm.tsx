@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { CITIES } from "../lib/cities";
+import { useEffect, useState } from "react";
+import { searchCities, type CityResult } from "../lib/citySearch";
+import { shortTzLabel } from "../lib/time";
 import type { Circle, Person } from "../data/store";
 
 type Props = {
@@ -37,7 +38,20 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
   const isWork = circle === "work";
   const [name, setName] = useState(initial?.name ?? "");
   const [cityQuery, setCityQuery] = useState(initial?.cityName ?? "");
-  const [cityName, setCityName] = useState(initial?.cityName ?? "");
+  const [selected, setSelected] = useState<CityResult | null>(
+    initial
+      ? {
+          name: initial.cityName,
+          country: "",
+          countryCode: initial.countryCode,
+          timezone: initial.timezone,
+          lat: initial.lat,
+          lng: initial.lng,
+        }
+      : null,
+  );
+  const [results, setResults] = useState<CityResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const [workStart, setWorkStart] = useState(initial?.workStart ?? 9);
   const [workEnd, setWorkEnd] = useState(initial?.workEnd ?? 17);
   const [workDays, setWorkDays] = useState<number[]>(initial?.workDays ?? [1, 2, 3, 4, 5]);
@@ -46,15 +60,35 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
   const [favorite, setFavorite] = useState(initial?.favorite ?? false);
   const [relationship, setRelationship] = useState(initial?.relationship ?? "");
 
-  const filteredCities = useMemo(() => {
-    if (!cityQuery) return CITIES.slice(0, 6);
-    const q = cityQuery.toLowerCase();
-    return CITIES.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q),
-    ).slice(0, 6);
-  }, [cityQuery]);
-
-  const selectedCity = CITIES.find((c) => c.name === cityName);
+  // Debounced any-city search; skipped once a city is locked in.
+  useEffect(() => {
+    if (selected || cityQuery.trim().length < 2) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const t = setTimeout(() => {
+      searchCities(cityQuery)
+        .then((r) => {
+          if (!cancelled) {
+            setResults(r);
+            setSearching(false);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setResults([]);
+            setSearching(false);
+          }
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [cityQuery, selected]);
 
   function toggleDay(d: number) {
     setWorkDays((prev) =>
@@ -64,14 +98,14 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !selectedCity) return;
+    if (!name.trim() || !selected) return;
     onSubmit({
       name: name.trim(),
-      cityName: selectedCity.name,
-      countryCode: selectedCity.countryCode,
-      timezone: selectedCity.timezone,
-      lat: selectedCity.lat,
-      lng: selectedCity.lng,
+      cityName: selected.name,
+      countryCode: selected.countryCode,
+      timezone: selected.timezone,
+      lat: selected.lat,
+      lng: selected.lng,
       workStart,
       workEnd,
       workDays,
@@ -101,55 +135,84 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
           value={cityQuery}
           onChange={(e) => {
             setCityQuery(e.target.value);
-            setCityName("");
+            setSelected(null);
           }}
           style={RAIL_INPUT}
-          placeholder="Search a city"
+          placeholder="Search any city"
         />
-        {!selectedCity && cityQuery && (
-          <ul
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: "4px 0 0",
-              maxHeight: 160,
-              overflow: "auto",
-              border: "1px solid #c9a872",
-              borderRadius: 2,
-              background: "#faf3e0",
-            }}
-          >
-            {filteredCities.map((c) => (
-              <li key={c.name}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCityName(c.name);
-                    setCityQuery(c.name);
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "6px 10px",
-                    textAlign: "left",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "ui-serif, Georgia, serif",
-                    fontSize: 12,
-                    color: "#1c1410",
-                  }}
-                >
-                  <span style={{ fontWeight: 500 }}>{c.name}</span>
-                  <span style={{ color: "#7a5a30", marginLeft: 8 }}>{c.country}</span>
-                </button>
-              </li>
-            ))}
-            {filteredCities.length === 0 && (
-              <li style={{ padding: "6px 10px", color: "#7a5a30", fontSize: 12 }}>
-                No matches
-              </li>
-            )}
-          </ul>
+        {selected ? (
+          <div style={{ fontSize: 11, color: "#7a5a30", marginTop: 4 }}>
+            {selected.country ? `${selected.country} · ` : ""}
+            {selected.timezone.replace(/_/g, " ")}
+          </div>
+        ) : (
+          cityQuery.trim().length >= 2 && (
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: "4px 0 0",
+                maxHeight: 180,
+                overflow: "auto",
+                border: "1px solid #c9a872",
+                borderRadius: 2,
+                background: "#faf3e0",
+              }}
+            >
+              {results.map((c, i) => (
+                <li key={`${c.name}-${c.countryCode}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelected(c);
+                      setCityQuery(c.name);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "6px 10px",
+                      display: "flex",
+                      alignItems: "baseline",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "ui-serif, Georgia, serif",
+                      fontSize: 12,
+                      color: "#1c1410",
+                    }}
+                  >
+                    <span
+                      style={{
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <span style={{ fontWeight: 500 }}>{c.name}</span>
+                      <span style={{ color: "#7a5a30", marginLeft: 8 }}>
+                        {[c.admin, c.country].filter(Boolean).join(", ")}
+                      </span>
+                    </span>
+                    <span style={{ color: "#a07434", flexShrink: 0, whiteSpace: "nowrap" }}>
+                      {shortTzLabel(c.timezone)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {!searching && results.length === 0 && (
+                <li style={{ padding: "6px 10px", color: "#7a5a30", fontSize: 12 }}>
+                  No matches
+                </li>
+              )}
+              {searching && results.length === 0 && (
+                <li style={{ padding: "6px 10px", color: "#7a5a30", fontSize: 12 }}>
+                  Searching…
+                </li>
+              )}
+            </ul>
+          )
         )}
       </div>
 
@@ -179,7 +242,7 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
               >
                 {Array.from({ length: 24 }).map((_, h) => (
                   <option key={h} value={h + 1}>
-                    {(h + 1).toString().padStart(2, "0")}:00
+                    {((h + 1) % 24).toString().padStart(2, "0")}:00
                   </option>
                 ))}
               </select>
@@ -238,7 +301,7 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
               >
                 {Array.from({ length: 24 }).map((_, h) => (
                   <option key={h} value={h + 1}>
-                    {(h + 1).toString().padStart(2, "0")}:00
+                    {((h + 1) % 24).toString().padStart(2, "0")}:00
                   </option>
                 ))}
               </select>
@@ -270,7 +333,7 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
               checked={favorite}
               onChange={(e) => setFavorite(e.target.checked)}
             />
-            <span>★ Favorite (larger pin, shown in Call Now)</span>
+            <span>★ Pin</span>
           </label>
         </>
       )}
@@ -278,7 +341,7 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
       <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
         <button
           type="submit"
-          disabled={!name.trim() || !selectedCity}
+          disabled={!name.trim() || !selected}
           style={{
             padding: "6px 14px",
             background: "#3d2410",
@@ -290,7 +353,7 @@ export default function PersonForm({ circle, initial, onSubmit, onCancel, submit
             fontSize: 12,
             letterSpacing: 2,
             textTransform: "uppercase",
-            opacity: !name.trim() || !selectedCity ? 0.4 : 1,
+            opacity: !name.trim() || !selected ? 0.4 : 1,
           }}
         >
           {submitLabel}

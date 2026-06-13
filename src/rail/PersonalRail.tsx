@@ -84,7 +84,7 @@ export default function PersonalRail({
             marginBottom: 8,
           }}
         >
-          Favorites awake
+          Pinned · awake now
         </div>
         {callNow.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -124,11 +124,11 @@ export default function PersonalRail({
           </div>
         ) : people.some((p) => p.favorite) ? (
           <div style={{ fontSize: 13, color: RAIL_MUTED }}>
-            No favorites are awake right now. Check back in a few hours.
+            None of your pinned people are awake right now.
           </div>
         ) : (
           <div style={{ fontSize: 13, color: RAIL_MUTED }}>
-            Star someone below to add them to Call Now.
+            Pin someone below to keep them up here.
           </div>
         )}
       </div>

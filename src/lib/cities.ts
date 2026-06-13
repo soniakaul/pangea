@@ -60,7 +60,3 @@ export const CITIES: City[] = [
   { name: "Melbourne", country: "Australia", countryCode: "AU", timezone: "Australia/Melbourne", lat: -37.81, lng: 144.96 },
   { name: "Auckland", country: "New Zealand", countryCode: "NZ", timezone: "Pacific/Auckland", lat: -36.85, lng: 174.76 },
 ];
-
-export function findCity(name: string): City | undefined {
-  return CITIES.find((c) => c.name === name);
-}
