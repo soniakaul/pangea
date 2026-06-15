@@ -5,11 +5,24 @@ type Props = {
   align?: "center" | "left";
 };
 
+// In-app browsers (Instagram, Facebook, LinkedIn, X, Snapchat, TikTok, Line, etc.)
+// are webviews. Google blocks its OAuth flow inside them (Error 403:
+// disallowed_useragent), so we nudge those users to open in a real browser.
+function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Line\/|Snapchat|MicroMessenger|Twitter|TikTok|Pinterest|GSA\//i.test(
+    ua,
+  );
+}
+
 export default function LoginForm({ align = "center" }: Props) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const showBanner = isInAppBrowser() && !bannerDismissed;
 
   const ta = align === "left" ? "left" : ("center" as const);
 
@@ -66,6 +79,45 @@ export default function LoginForm({ align = "center" }: Props) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+      {showBanner && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            padding: "10px 12px",
+            background: "rgba(201, 168, 114, 0.18)",
+            border: "1px solid #c9a872",
+            borderRadius: 2,
+            color: "#3d2410",
+            fontFamily: "ui-serif, Georgia, serif",
+            fontSize: 12,
+            lineHeight: 1.5,
+            textAlign: "left",
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            Google sign-in is blocked inside this app's browser. Tap the menu
+            (<strong>⋯</strong>) and choose <em>Open in browser</em>, or use the
+            email link below.
+          </span>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            aria-label="Dismiss"
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "#7a5a30",
+              fontSize: 16,
+              lineHeight: 1,
+              padding: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
       <button
         onClick={handleGoogle}
         disabled={busy}

@@ -24,6 +24,7 @@ type Props = {
   onUpdate: (id: string, patch: Partial<Person>) => void;
   onRemove: (id: string) => void;
   onToggleFavorite: (id: string) => void;
+  mobile?: boolean;
 };
 
 export default function PersonalRail({
@@ -36,6 +37,7 @@ export default function PersonalRail({
   onUpdate,
   onRemove,
   onToggleFavorite,
+  mobile = false,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -61,8 +63,9 @@ export default function PersonalRail({
   return (
     <aside
       style={{
-        width: 320,
-        borderLeft: `1px solid ${RAIL_BORDER}`,
+        width: mobile ? "100%" : 320,
+        height: mobile ? "100%" : undefined,
+        borderLeft: mobile ? "none" : `1px solid ${RAIL_BORDER}`,
         background: RAIL_BG,
         display: "flex",
         flexDirection: "column",

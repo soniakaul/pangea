@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Splash from "./components/Splash";
 import WireGlobe from "./components/WireGlobe";
 import Globe, { type PinDatum } from "./globe/Globe";
@@ -9,6 +9,7 @@ import { useAuth } from "./data/useAuth";
 import { usePreferences } from "./data/usePreferences";
 import { isPersonAwake, isPersonWorking } from "./lib/overlap";
 import { CITIES } from "./lib/cities";
+import { useIsMobile } from "./lib/useIsMobile";
 import LoginPage from "./login/LoginPage";
 
 const TABS: { id: Circle; label: string }[] = [
@@ -29,6 +30,8 @@ export default function App() {
   const [now, setNow] = useState(() => new Date());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number; lng: number } | null>(null);
+  const isMobile = useIsMobile();
+  const [railOpen, setRailOpen] = useState(false);
   const { store, addPerson, updatePerson, removePerson, toggleFavorite } = useStore(user);
   const { pinColor, bodyPalette, selfAvailability, setPinColor, setBodyPalette, setSelfAvailability } =
     usePreferences(user);
@@ -53,6 +56,16 @@ export default function App() {
       handleSelectPerson(id);
     },
     [handleSelectPerson],
+  );
+
+  // On mobile, selecting someone from the sheet should drop it so the
+  // globe's fly-to animation is visible.
+  const handleSelectFromRail = useCallback(
+    (id: string) => {
+      handleSelectPerson(id);
+      if (isMobile) setRailOpen(false);
+    },
+    [handleSelectPerson, isMobile],
   );
 
   useEffect(() => {
@@ -124,6 +137,38 @@ export default function App() {
     return <LoginPage onSkip={() => setGuestMode(true)} />;
   }
 
+  const railEl =
+    tab === "work" ? (
+      <WorkRail
+        people={people}
+        peopleForBestMeeting={workPeopleWithSelf}
+        now={now}
+        hoveredId={hoveredId}
+        selfCityName={selfCity.name}
+        selfAvailability={selfAvailability}
+        onSelfAvailabilityChange={setSelfAvailability}
+        onHover={setHoveredId}
+        onSelect={handleSelectFromRail}
+        onAdd={(p) => addPerson("work", p)}
+        onUpdate={(id, patch) => updatePerson("work", id, patch)}
+        onRemove={(id) => removePerson("work", id)}
+        mobile={isMobile}
+      />
+    ) : (
+      <PersonalRail
+        people={people}
+        now={now}
+        hoveredId={hoveredId}
+        onHover={setHoveredId}
+        onSelect={handleSelectFromRail}
+        onAdd={(p) => addPerson("personal", p)}
+        onUpdate={(id, patch) => updatePerson("personal", id, patch)}
+        onRemove={(id) => removePerson("personal", id)}
+        onToggleFavorite={(id) => toggleFavorite("personal", id)}
+        mobile={isMobile}
+      />
+    );
+
   return (
     <>
       {loading && <Splash onDone={handleSplashDone} />}
@@ -144,24 +189,24 @@ export default function App() {
             alignItems: "center",
             justifyContent: "space-between",
             borderBottom: "1px solid rgba(169, 132, 72, 0.3)",
-            padding: "0 24px",
+            padding: isMobile ? "0 14px" : "0 24px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <WireGlobe size={28} strokeWidth={1.5} duration={14} />
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
+            <WireGlobe size={isMobile ? 24 : 28} strokeWidth={1.5} duration={14} />
             <span
               style={{
                 fontFamily: "ui-serif, Georgia, serif",
-                fontSize: 18,
-                letterSpacing: 6,
+                fontSize: isMobile ? 15 : 18,
+                letterSpacing: isMobile ? 3 : 6,
                 textTransform: "lowercase",
               }}
             >
               pangea
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <nav style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 16 }}>
+            <nav style={{ display: "flex", gap: isMobile ? 2 : 4 }}>
               {TABS.map((t) => (
                 <button
                   key={t.id}
@@ -170,14 +215,14 @@ export default function App() {
                     setHoveredId(null);
                   }}
                   style={{
-                    padding: "6px 18px",
+                    padding: isMobile ? "5px 10px" : "6px 18px",
                     borderRadius: 2,
                     border: "none",
                     background: tab === t.id ? "#3d2410" : "transparent",
                     color: tab === t.id ? "#faf3e0" : "#7a5a30",
                     fontFamily: "ui-serif, Georgia, serif",
-                    fontSize: 13,
-                    letterSpacing: 2,
+                    fontSize: isMobile ? 11 : 13,
+                    letterSpacing: isMobile ? 1 : 2,
                     textTransform: "uppercase",
                     cursor: "pointer",
                     transition: "background 120ms, color 120ms",
@@ -195,14 +240,14 @@ export default function App() {
                 }}
                 title={user.email ?? "signed in"}
                 style={{
-                  padding: "6px 14px",
+                  padding: isMobile ? "5px 9px" : "6px 14px",
                   borderRadius: 2,
                   border: "1px solid rgba(169, 132, 72, 0.4)",
                   background: "transparent",
                   color: "#7a5a30",
                   fontFamily: "ui-serif, Georgia, serif",
-                  fontSize: 11,
-                  letterSpacing: 2,
+                  fontSize: isMobile ? 10 : 11,
+                  letterSpacing: isMobile ? 1 : 2,
                   textTransform: "uppercase",
                   cursor: "pointer",
                 }}
@@ -213,14 +258,14 @@ export default function App() {
               <button
                 onClick={() => setGuestMode(false)}
                 style={{
-                  padding: "6px 14px",
+                  padding: isMobile ? "5px 9px" : "6px 14px",
                   borderRadius: 2,
                   border: "1px solid rgba(169, 132, 72, 0.4)",
                   background: "transparent",
                   color: "#7a5a30",
                   fontFamily: "ui-serif, Georgia, serif",
-                  fontSize: 11,
-                  letterSpacing: 2,
+                  fontSize: isMobile ? 10 : 11,
+                  letterSpacing: isMobile ? 1 : 2,
                   textTransform: "uppercase",
                   cursor: "pointer",
                 }}
@@ -231,7 +276,7 @@ export default function App() {
           </div>
         </header>
 
-        <main style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <main style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Globe
               pins={pins}
@@ -248,35 +293,149 @@ export default function App() {
               onBodyPaletteChange={setBodyPalette}
             />
           </div>
-          {tab === "work" ? (
-            <WorkRail
-              people={people}
-              peopleForBestMeeting={workPeopleWithSelf}
-              now={now}
-              hoveredId={hoveredId}
-              selfCityName={selfCity.name}
-              selfAvailability={selfAvailability}
-              onSelfAvailabilityChange={setSelfAvailability}
-              onHover={setHoveredId}
-              onSelect={handleSelectPerson}
-              onAdd={(p) => addPerson("work", p)}
-              onUpdate={(id, patch) => updatePerson("work", id, patch)}
-              onRemove={(id) => removePerson("work", id)}
-            />
+          {isMobile ? (
+            <MobileSheet
+              open={railOpen}
+              onOpen={() => setRailOpen(true)}
+              onClose={() => setRailOpen(false)}
+              label={tab === "work" ? "team" : "people"}
+              count={people.length}
+            >
+              {railEl}
+            </MobileSheet>
           ) : (
-            <PersonalRail
-              people={people}
-              now={now}
-              hoveredId={hoveredId}
-              onHover={setHoveredId}
-              onSelect={handleSelectPerson}
-              onAdd={(p) => addPerson("personal", p)}
-              onUpdate={(id, patch) => updatePerson("personal", id, patch)}
-              onRemove={(id) => removePerson("personal", id)}
-              onToggleFavorite={(id) => toggleFavorite("personal", id)}
-            />
+            railEl
           )}
         </main>
+      </div>
+    </>
+  );
+}
+
+function MobileSheet({
+  open,
+  onOpen,
+  onClose,
+  label,
+  count,
+  children,
+}: {
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  label: string;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      {/* Floating opener — only when the sheet is down */}
+      {!open && (
+        <button
+          onClick={onOpen}
+          style={{
+            position: "absolute",
+            bottom: 22,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "11px 24px",
+            background: "#3d2410",
+            color: "#faf3e0",
+            border: "none",
+            borderRadius: 999,
+            boxShadow: "0 6px 20px rgba(28, 20, 16, 0.35)",
+            fontFamily: "ui-serif, Georgia, serif",
+            fontSize: 12,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            cursor: "pointer",
+            zIndex: 20,
+          }}
+        >
+          {label} · {count}
+          <span style={{ fontSize: 13, lineHeight: 1 }}>↑</span>
+        </button>
+      )}
+
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(28, 20, 16, 0.4)",
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity 240ms ease",
+          zIndex: 25,
+        }}
+      />
+
+      {/* The sheet itself */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: "80%",
+          display: "flex",
+          flexDirection: "column",
+          background: "#f5ebd6",
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          boxShadow: "0 -10px 36px rgba(28, 20, 16, 0.3)",
+          transform: open ? "translateY(0)" : "translateY(100%)",
+          transition: "transform 300ms cubic-bezier(0.22, 1, 0.36, 1)",
+          zIndex: 30,
+          overflow: "hidden",
+        }}
+      >
+        {/* Grab bar + close */}
+        <div
+          onClick={onClose}
+          style={{
+            flexShrink: 0,
+            position: "relative",
+            padding: "12px 16px 8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: "1px solid rgba(201, 168, 114, 0.4)",
+            cursor: "pointer",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              color: "#7a5a30",
+              fontFamily: "ui-serif, Georgia, serif",
+            }}
+          >
+            {label} · {count}
+          </span>
+          <span
+            style={{
+              position: "absolute",
+              top: 6,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: 38,
+              height: 4,
+              borderRadius: 999,
+              background: "rgba(122, 90, 48, 0.4)",
+            }}
+          />
+          <span style={{ fontSize: 20, lineHeight: 1, color: "#7a5a30" }} aria-label="Close">
+            ×
+          </span>
+        </div>
+        <div style={{ flex: 1, minHeight: 0, display: "flex" }}>{children}</div>
       </div>
     </>
   );
