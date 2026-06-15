@@ -26,6 +26,7 @@ type Props = {
   onAdd: (person: Omit<Person, "id">) => void;
   onUpdate: (id: string, patch: Partial<Person>) => void;
   onRemove: (id: string) => void;
+  mobile?: boolean;
 };
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -78,6 +79,7 @@ export default function WorkRail({
   onAdd,
   onUpdate,
   onRemove,
+  mobile = false,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -104,8 +106,9 @@ export default function WorkRail({
   return (
     <aside
       style={{
-        width: 320,
-        borderLeft: `1px solid ${RAIL_BORDER}`,
+        width: mobile ? "100%" : 320,
+        height: mobile ? "100%" : undefined,
+        borderLeft: mobile ? "none" : `1px solid ${RAIL_BORDER}`,
         background: RAIL_BG,
         display: "flex",
         flexDirection: "column",
